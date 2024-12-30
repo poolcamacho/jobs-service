@@ -1,12 +1,12 @@
 
-# Auth Service
+# Jobs Service
 
-**Auth Service** es un servicio de autenticación construido en Go, que incluye funcionalidades como registro de usuarios, inicio de sesión con JWT y un endpoint para verificar el estado del servicio.
+**Jobs Service** es un servicio construido en Go que permite gestionar información sobre ofertas de trabajo, incluyendo funcionalidades para listar y crear nuevos trabajos. También incluye un endpoint para verificar el estado del servicio.
 
 ## Estructura del Proyecto
 
 ```plaintext
-auth-service/
+jobs-service/
 ├── .github/              # Configuración para GitHub Actions
 ├── cmd/
 │   └── main.go           # Punto de entrada principal de la aplicación
@@ -19,9 +19,8 @@ auth-service/
 ├── pkg/
 │   ├── config/           # Configuración de la aplicación
 │   ├── db/               # Conexión a la base de datos
-│   ├── jwt/              # Utilidades para manejo de JWT
 │   ├── logger/           # Configuración de logging
-│   └── utils/            # Funciones utilitarias (e.g., hashing de contraseñas)
+│   └── utils/            # Funciones utilitarias
 ├── .env                  # Variables de entorno (no incluir en producción)
 ├── .gitignore            # Archivos y carpetas ignoradas por Git
 ├── coverage.out          # Archivo de cobertura de pruebas
@@ -45,8 +44,8 @@ auth-service/
 ### 1. Clonar el repositorio
 
 ```bash
-git clone https://github.com/poolcamacho/auth-service.git
-cd auth-service
+git clone https://github.com/poolcamacho/jobs-service.git
+cd jobs-service
 ```
 
 ### 2. Configurar las variables de entorno
@@ -92,13 +91,13 @@ Esto generará un archivo `coverage.out` con la cobertura de pruebas.
 ### 1. Construir la imagen de Docker
 
 ```bash
-docker build -t auth-service .
+docker build -t jobs-service .
 ```
 
 ### 2. Ejecutar el contenedor
 
 ```bash
-docker run -d --name auth-service   -e DATABASE_URL=admin_db:password@tcp(localhost:3306)/auth_service_db   -e JWT_SECRET_KEY=tu-secreto-jwt   -p 3000:3000 auth-service
+docker run -d --name jobs-service   -e DATABASE_URL=admin_db:password@tcp(localhost:3306)/auth_service_db   -e JWT_SECRET_KEY=tu-secreto-jwt   -p 3000:3000 jobs-service
 ```
 
 El servicio estará disponible en `http://localhost:3000`.
@@ -123,19 +122,19 @@ El servicio estará disponible en `http://localhost:3000`.
 
 ---
 
-### 2. **Registro de Usuario**
+### 2. **Registro de Trabajo**
 
-**Descripción**: Registra un nuevo usuario.
+**Descripción**: Agrega un nuevo trabajo.
 
-**Endpoint**: `POST /register`
+**Endpoint**: `POST /jobs`
 
 **Cuerpo de la Solicitud**:
 
 ```json
 {
-  "username": "testuser",
-  "email": "testuser@example.com",
-  "password": "password123"
+  "title": "Backend Developer",
+  "description": "Develop backend services for applications.",
+  "salary_range": "4000-6000"
 }
 ```
 
@@ -143,33 +142,7 @@ El servicio estará disponible en `http://localhost:3000`.
 
 ```json
 {
-  "message": "user registered successfully"
-}
-```
-
----
-
-### 3. **Inicio de Sesión**
-
-**Descripción**: Autentica un usuario y genera un token JWT.
-
-**Endpoint**: `POST /login`
-
-**Cuerpo de la Solicitud**:
-
-```json
-{
-  "email": "testuser@example.com",
-  "password": "password123"
-}
-```
-
-**Ejemplo de Respuesta Exitosa**:
-
-```json
-{
-  "message": "login successful",
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "message": "job created successfully"
 }
 ```
 
@@ -177,9 +150,39 @@ El servicio estará disponible en `http://localhost:3000`.
 
 ```json
 {
-  "error": "invalid credentials"
+  "error": "title and description are required"
 }
 ```
 
+---
+
+### 3. **Listar Trabajos**
+
+**Descripción**: Recupera una lista de todos los trabajos disponibles.
+
+**Endpoint**: `GET /jobs`
+
+**Ejemplo de Respuesta Exitosa**:
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Software Engineer",
+    "description": "Develop and maintain software.",
+    "salary_range": "4000-6000",
+    "created_at": "2024-12-30T02:00:00Z",
+    "updated_at": "2024-12-30T02:00:00Z"
+  },
+  {
+    "id": 2,
+    "title": "Product Manager",
+    "description": "Oversee product lifecycle.",
+    "salary_range": "5000-7000",
+    "created_at": "2024-12-30T02:10:00Z",
+    "updated_at": "2024-12-30T02:10:00Z"
+  }
+]
+```
 ---
 

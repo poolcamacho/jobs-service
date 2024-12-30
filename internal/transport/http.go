@@ -1,92 +1,90 @@
 package transport
 
 import (
-	"github.com/poolcamacho/auth-service/internal/domain"
-	"github.com/poolcamacho/auth-service/internal/service"
+	"github.com/poolcamacho/jobs-service/internal/domain"
+	"github.com/poolcamacho/jobs-service/internal/service"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-// AuthHandler handles HTTP requests for authentication
-type AuthHandler struct {
-	authService service.AuthService
+// JobHandler handles HTTP requests related to jobs
+// This struct acts as the controller for handling HTTP endpoints related to jobs.
+type JobHandler struct {
+	service service.JobService // Dependency on JobService for business logic
 }
 
-// NewAuthHandler creates a new AuthHandler instance
-func NewAuthHandler(authService service.AuthService) *AuthHandler {
-	return &AuthHandler{authService: authService}
+// NewJobHandler creates a new JobHandler instance
+// This is a constructor function to initialize the JobHandler with a JobService dependency.
+func NewJobHandler(service service.JobService) *JobHandler {
+	return &JobHandler{service: service}
 }
 
 // HealthCheck provides a simple health status of the service
 // @Summary Check service health
-// @Description Returns the health status of the authentication service
+// @Description Returns the health status of the jobs service
 // @Tags Health
 // @Produce json
 // @Success 200 {object} map[string]string "Service is healthy"
 // @Router /health [get]
-func (h *AuthHandler) HealthCheck(c *gin.Context) {
+func (h *JobHandler) HealthCheck(c *gin.Context) {
+	// Respond with a simple JSON indicating the service is running
 	c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 }
 
-// Register handles the registration of a new user
-// @Summary Register a new user
-// @Description Register a new user by providing username, email, and password
-// @Tags Authentication
-// @Accept json
+// GetJobs handles the retrieval of all jobs
+// @Summary Get all jobs
+// @Description Retrieve a list of all jobs in the system
+// @Tags Jobs
 // @Produce json
-// @Param request body domain.RegisterRequest true "User Registration Request"
-// @Success 201 {object} map[string]string "User registered successfully"
-// @Failure 400 {object} map[string]string "Bad request"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /register [post]
-func (h *AuthHandler) Register(c *gin.Context) {
-	var req domain.RegisterRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+// @Success 200 {array} domain.Job "List of jobs"
+// @Failure 500 {object} map[string]string "Failed to fetch jobs"
+// @Router /jobs [get]
+func (h *JobHandler) GetJobs(c *gin.Context) {
+	// Fetch all jobs using the service
+	jobs, err := h.service.GetAllJobs()
+	if err != nil {
+		// Return 500 Internal Server Error if fetching fails
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch jobs"})
 		return
 	}
-
-	// Map RegisterRequest to User
-	user := &domain.User{
-		Username:     req.Username,
-		Email:        req.Email,
-		Role:         "user",       // Default role
-		PasswordHash: req.Password, // Pass the plain-text password for hashing in the service
-	}
-
-	// Delegate the registration process to the service
-	if err := h.authService.Register(user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register user"})
-		return
-	}
-
-	c.JSON(http.StatusCreated, gin.H{"message": "user registered successfully"})
+	// Return the list of jobs in JSON format
+	c.JSON(http.StatusOK, jobs)
 }
 
-// Login handles user authentication and token generation
-// @Summary Login a user
-// @Description Authenticate a user using email and password
-// @Tags Authentication
+// CreateJob handles the creation of a new job
+// @Summary Create a new job
+// @Description Add a new job by providing title, description, and salary range
+// @Tags Jobs
 // @Accept json
 // @Produce json
-// @Param request body domain.LoginRequest true "User Login Request"
-// @Success 200 {object} map[string]string "Login successful with JWT token"
+// @Param request body domain.Job true "Job Creation Request"
+// @Success 201 {object} map[string]string "Job created successfully"
 // @Failure 400 {object} map[string]string "Bad request"
-// @Failure 401 {object} map[string]string "Invalid credentials"
-// @Router /login [post]
-func (h *AuthHandler) Login(c *gin.Context) {
-	var credentials domain.LoginRequest
-	if err := c.ShouldBindJSON(&credentials); err != nil {
+// @Failure 500 {object} map[string]string "Failed to create job"
+// @Router /jobs [post]
+func (h *JobHandler) CreateJob(c *gin.Context) {
+	var job domain.Job
+	// Bind the incoming JSON request to the Job struct
+	if err := c.ShouldBindJSON(&job); err != nil {
+		// Return 400 Bad Request if JSON is invalid
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user, err := h.authService.Login(credentials.Email, credentials.Password)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid credentials"})
+	// Validate required fields
+	if job.Description == "" || job.Title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title and description are required"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "login successful", "token": user})
+	// Add the job using the service
+	if err := h.service.AddJob(&job); err != nil {
+		// Return 500 Internal Server Error if creation fails
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create job"})
+		return
+	}
+
+	// Return 201 Created status with a success message
+	c.JSON(http.StatusCreated, gin.H{"message": "job created successfully"})
 }

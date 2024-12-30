@@ -4,22 +4,19 @@ import (
 	"log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/poolcamacho/auth-service/internal/repository"
-	"github.com/poolcamacho/auth-service/internal/service"
-	"github.com/poolcamacho/auth-service/internal/transport"
-	"github.com/poolcamacho/auth-service/pkg/config"
-	"github.com/poolcamacho/auth-service/pkg/db"
-	"github.com/poolcamacho/auth-service/pkg/utils"
-
+	"github.com/poolcamacho/jobs-service/internal/repository"
+	"github.com/poolcamacho/jobs-service/internal/service"
+	"github.com/poolcamacho/jobs-service/internal/transport"
+	"github.com/poolcamacho/jobs-service/pkg/config"
+	"github.com/poolcamacho/jobs-service/pkg/db"
+	jwtUtil "github.com/poolcamacho/jobs-service/pkg/jwt"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-
-	_ "github.com/poolcamacho/auth-service/docs" // Import Swagger docs
 )
 
-// @title Auth Service API
+// @title Jobs Service API
 // @version 1.0
-// @description API for user authentication and management.
+// @description API for managing jobs in the system.
 // @termsOfService http://example.com/terms/
 
 // @contact.name API Support
@@ -33,33 +30,42 @@ import (
 // @BasePath /
 func main() {
 	// Load configuration
+	// Load the application configuration from environment variables
 	cfg := config.Load()
 
 	// Connect to the database
+	// Establish a connection to the database using the configuration
 	dbConn := db.Connect(cfg.DatabaseURL)
 
 	// Initialize repository
-	userRepo := repository.NewUserRepository(dbConn)
-
-	// Initialize password utilities
-	passwordUtil := &utils.DefaultPasswordUtils{}
+	// Create a new instance of JobRepository to interact with the database
+	candidateRepo := repository.NewJobRepository(dbConn)
 
 	// Initialize service
-	authService := service.NewAuthService(userRepo, cfg.JWTSecretKey, passwordUtil)
+	// Create a new instance of JobService to manage business logic
+	candidateService := service.NewJobService(candidateRepo)
 
 	// Initialize Gin and routes
+	// Setup the Gin HTTP router
 	r := gin.Default()
-	authHandler := transport.NewAuthHandler(authService)
+	candidateHandler := transport.NewJobHandler(candidateService)
 
 	// Swagger route
+	// Serve Swagger documentation at /swagger/*any
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Register routes
-	r.POST("/register", authHandler.Register) // Register a new user
-	r.POST("/login", authHandler.Login)       // Login and generate token
-	r.GET("/health", authHandler.HealthCheck) // Health check
+	// Protected routes requiring authentication
+	r.GET("/jobs", jwtUtil.AuthMiddleware(cfg.JWTSecretKey), candidateHandler.GetJobs)    // Get all jobs
+	r.POST("/jobs", jwtUtil.AuthMiddleware(cfg.JWTSecretKey), candidateHandler.CreateJob) // Add a new candidate
 
-	log.Printf("Auth Service is running on port %s", cfg.Port)
+	// Public route
+	// Health check endpoint to verify if the service is running
+	r.GET("/health", candidateHandler.HealthCheck)
+
+	// Start server
+	// Start the Gin HTTP server on the configured port
+	log.Printf("Jobs Service is running on port %s", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

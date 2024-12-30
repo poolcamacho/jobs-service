@@ -26,7 +26,7 @@ const docTemplate = `{
     "paths": {
         "/health": {
             "get": {
-                "description": "Returns the health status of the authentication service",
+                "description": "Returns the health status of the jobs service",
                 "produces": [
                     "application/json"
                 ],
@@ -47,51 +47,28 @@ const docTemplate = `{
                 }
             }
         },
-        "/login": {
-            "post": {
-                "description": "Authenticate a user using email and password",
-                "consumes": [
-                    "application/json"
-                ],
+        "/jobs": {
+            "get": {
+                "description": "Retrieve a list of all jobs in the system",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "Jobs"
                 ],
-                "summary": "Login a user",
-                "parameters": [
-                    {
-                        "description": "User Login Request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/domain.LoginRequest"
-                        }
-                    }
-                ],
+                "summary": "Get all jobs",
                 "responses": {
                     "200": {
-                        "description": "Login successful with JWT token",
+                        "description": "List of jobs",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Job"
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "401": {
-                        "description": "Invalid credentials",
+                    "500": {
+                        "description": "Failed to fetch jobs",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -100,11 +77,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/register": {
+            },
             "post": {
-                "description": "Register a new user by providing username, email, and password",
+                "description": "Add a new job by providing title, description, and salary range",
                 "consumes": [
                     "application/json"
                 ],
@@ -112,23 +87,23 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Authentication"
+                    "Jobs"
                 ],
-                "summary": "Register a new user",
+                "summary": "Create a new job",
                 "parameters": [
                     {
-                        "description": "User Registration Request",
+                        "description": "Job Creation Request",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.RegisterRequest"
+                            "$ref": "#/definitions/domain.Job"
                         }
                     }
                 ],
                 "responses": {
                     "201": {
-                        "description": "User registered successfully",
+                        "description": "Job created successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -146,7 +121,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Failed to create job",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -159,31 +134,31 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "domain.LoginRequest": {
-            "type": "object",
-            "required": [
-                "email",
-                "password"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
-        "domain.RegisterRequest": {
+        "domain.Job": {
             "type": "object",
             "properties": {
-                "email": {
+                "created_at": {
+                    "description": "Creation timestamp",
                     "type": "string"
                 },
-                "password": {
+                "description": {
+                    "description": "Job description",
                     "type": "string"
                 },
-                "username": {
+                "id": {
+                    "description": "Job ID",
+                    "type": "integer"
+                },
+                "salary_range": {
+                    "description": "Salary range",
+                    "type": "string"
+                },
+                "title": {
+                    "description": "Job title",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "description": "Last update timestamp",
                     "type": "string"
                 }
             }
@@ -197,8 +172,8 @@ var SwaggerInfo = &swag.Spec{
 	Host:             "localhost:8080",
 	BasePath:         "/",
 	Schemes:          []string{},
-	Title:            "Auth Service API",
-	Description:      "API for user authentication and management.",
+	Title:            "Jobs Service API",
+	Description:      "API for managing jobs in the system.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

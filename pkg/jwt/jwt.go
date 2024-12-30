@@ -1,6 +1,10 @@
 package jwt
 
 import (
+	"net/http"
+	"strings"
+
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
 )
 
@@ -40,4 +44,43 @@ func ValidateToken(secretKey string, tokenString string) (jwt.MapClaims, error) 
 	}
 
 	return claims, nil
+}
+
+// AuthMiddleware is a middleware that validates JWT tokens in HTTP requests
+// @Description Middleware to validate JSON Web Tokens (JWT) for protected routes.
+// @Param secretKey string The secret key used to validate the token.
+// @Return gin.HandlerFunc The middleware function for Gin.
+func AuthMiddleware(secretKey string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Extract the Authorization header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
+			c.Abort()
+			return
+		}
+
+		// Ensure the token is prefixed with "Bearer "
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid Authorization header format"})
+			c.Abort()
+			return
+		}
+
+		// Validate the token
+		tokenString := parts[1]
+		claims, err := ValidateToken(secretKey, tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token", "details": err.Error()})
+			c.Abort()
+			return
+		}
+
+		// Store claims in the context for further use
+		c.Set("claims", claims)
+
+		// Continue to the next middleware/handler
+		c.Next()
+	}
 }

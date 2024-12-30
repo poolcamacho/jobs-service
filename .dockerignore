@@ -31,7 +31,7 @@ Thumbs.db
 
 # Archivos generados por Go
 bin/
-auth-service
+jobs-service
 
 # Archivos de configuración locales
 .env

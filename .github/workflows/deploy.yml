@@ -13,7 +13,7 @@ jobs:
     env:
       AWS_REGION: us-east-1 # AWS region
       ECR_REGISTRY: 211125398650.dkr.ecr.us-east-1.amazonaws.com # ECR registry URL
-      ECR_REPOSITORY: auth-service # ECR repository name
+      ECR_REPOSITORY: job-service # ECR repository name
 
     outputs:
       image_tag: ${{ steps.set-image-tag.outputs.image_tag }}
@@ -60,9 +60,9 @@ jobs:
     env:
       AWS_REGION: us-east-1
       ECR_REGISTRY: 211125398650.dkr.ecr.us-east-1.amazonaws.com
-      ECR_REPOSITORY: auth-service
+      ECR_REPOSITORY: job-service
       IMAGE_TAG: ${{ needs.build-and-push-ecr.outputs.image_tag }}
-      APP_RUNNER_ARN: arn:aws:apprunner:us-east-1:211125398650:service/auth-service-app-runner/374398cb0cfd41d785d157189867576d
+      APP_RUNNER_ARN: arn:aws:apprunner:us-east-1:211125398650:service/job-service-app-runner/02535581e38a4ca483c7c1d0aa21c9fa
 
     steps:
       - name: Configure AWS CLI

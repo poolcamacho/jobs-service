@@ -1,22 +1,24 @@
 basePath: /
 definitions:
-  domain.LoginRequest:
+  domain.Job:
     properties:
-      email:
+      created_at:
+        description: Creation timestamp
         type: string
-      password:
+      description:
+        description: Job description
         type: string
-    required:
-    - email
-    - password
-    type: object
-  domain.RegisterRequest:
-    properties:
-      email:
+      id:
+        description: Job ID
+        type: integer
+      salary_range:
+        description: Salary range
         type: string
-      password:
+      title:
+        description: Job title
         type: string
-      username:
+      updated_at:
+        description: Last update timestamp
         type: string
     type: object
 host: localhost:8080
@@ -25,17 +27,17 @@ info:
     email: support@example.com
     name: API Support
     url: http://www.example.com/support
-  description: API for user authentication and management.
+  description: API for managing jobs in the system.
   license:
     name: MIT License
     url: https://opensource.org/licenses/MIT
   termsOfService: http://example.com/terms/
-  title: Auth Service API
+  title: Jobs Service API
   version: "1.0"
 paths:
   /health:
     get:
-      description: Returns the health status of the authentication service
+      description: Returns the health status of the jobs service
       produces:
       - application/json
       responses:
@@ -48,59 +50,43 @@ paths:
       summary: Check service health
       tags:
       - Health
-  /login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticate a user using email and password
-      parameters:
-      - description: User Login Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/domain.LoginRequest'
+  /jobs:
+    get:
+      description: Retrieve a list of all jobs in the system
       produces:
       - application/json
       responses:
         "200":
-          description: Login successful with JWT token
+          description: List of jobs
+          schema:
+            items:
+              $ref: '#/definitions/domain.Job'
+            type: array
+        "500":
+          description: Failed to fetch jobs
           schema:
             additionalProperties:
               type: string
             type: object
-        "400":
-          description: Bad request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "401":
-          description: Invalid credentials
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Login a user
+      summary: Get all jobs
       tags:
-      - Authentication
-  /register:
+      - Jobs
     post:
       consumes:
       - application/json
-      description: Register a new user by providing username, email, and password
+      description: Add a new job by providing title, description, and salary range
       parameters:
-      - description: User Registration Request
+      - description: Job Creation Request
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/domain.RegisterRequest'
+          $ref: '#/definitions/domain.Job'
       produces:
       - application/json
       responses:
         "201":
-          description: User registered successfully
+          description: Job created successfully
           schema:
             additionalProperties:
               type: string
@@ -112,12 +98,12 @@ paths:
               type: string
             type: object
         "500":
-          description: Internal server error
+          description: Failed to create job
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Register a new user
+      summary: Create a new job
       tags:
-      - Authentication
+      - Jobs
 swagger: "2.0"
