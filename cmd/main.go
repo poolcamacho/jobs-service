@@ -12,6 +12,8 @@ import (
 	jwtUtil "github.com/poolcamacho/jobs-service/pkg/jwt"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "github.com/poolcamacho/jobs-service/docs" // Import Swagger docs
 )
 
 // @title Jobs Service API
