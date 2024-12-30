@@ -1,0 +1,86 @@
+name: Deploy to AWS ECR and App Runner
+
+on:
+  push:
+    branches:
+      - master # Trigger on push to master branch
+
+jobs:
+  build-and-push-ecr:
+    name: Build and Push Docker Image to ECR
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_REGION: us-east-1 # AWS region
+      ECR_REGISTRY: 211125398650.dkr.ecr.us-east-1.amazonaws.com # ECR registry URL
+      ECR_REPOSITORY: auth-service # ECR repository name
+
+    outputs:
+      image_tag: ${{ steps.set-image-tag.outputs.image_tag }}
+
+    steps:
+      # Step 1: Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Configure AWS CLI credentials
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Step 3: Generate Image Tag
+      - name: Generate Image Tag
+        id: set-image-tag
+        run: echo "::set-output name=image_tag::${{ github.sha }}"
+
+      # Step 4: Login to Amazon ECR
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+
+      # Step 5: Build and tag the Docker image
+      - name: Build and Tag Docker Image
+        run: |
+          docker build -t ${{ env.ECR_REPOSITORY }} .
+          docker tag ${{ env.ECR_REPOSITORY }}:latest ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.set-image-tag.outputs.image_tag }}
+
+      # Step 6: Push the Docker image to ECR
+      - name: Push Docker Image to ECR
+        run: |
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ steps.set-image-tag.outputs.image_tag }}
+
+  deploy-to-app-runner:
+    name: Deploy to AWS App Runner
+    runs-on: ubuntu-latest
+    needs: build-and-push-ecr
+
+    env:
+      AWS_REGION: us-east-1
+      ECR_REGISTRY: 211125398650.dkr.ecr.us-east-1.amazonaws.com
+      ECR_REPOSITORY: auth-service
+      IMAGE_TAG: ${{ needs.build-and-push-ecr.outputs.image_tag }}
+      APP_RUNNER_ARN: arn:aws:apprunner:us-east-1:211125398650:service/auth-service-app-runner/374398cb0cfd41d785d157189867576d
+
+    steps:
+      - name: Configure AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to AWS App Runner
+        run: |
+          aws apprunner update-service --service-arn ${{ env.APP_RUNNER_ARN }} \
+            --source-configuration "{
+              \"ImageRepository\": {
+                \"ImageIdentifier\": \"${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}\",
+                \"ImageConfiguration\": {
+                  \"Port\": \"3000\"
+                },
+                \"ImageRepositoryType\": \"ECR\"
+              }
+            }"
